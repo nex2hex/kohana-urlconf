@@ -8,28 +8,13 @@ class Urlconf_Route extends Kohana_Route {
 
 	protected static $_confed_routes = array();
 
-	/**
-	 * Retrieves named routes for current urlconf. Autocached.
-	 *
-	 *     $routes = Route::all();
-	 *
-	 * @return  array  routes by name
-	 */
-	public static function all($urlconf = NULL)
-	{
-		if ($urlconf === NULL)
-		{
-			$urlconf = self::$_current_urlconf;
-		}
-
-		// Load urlconf
-		self::load_urlconf($urlconf);
-
-		return self::$_confed_routes[$urlconf];
-	}
-
 	public static function set($name, $uri_callback = NULL, $regex = NULL)
 	{
+		if ( ! isset(self::$_confed_routes[self::$_current_urlconf]))
+		{
+			throw new Kohana_Exception("All rotes must be defined in urls folder.");
+		}
+
 		$route = new Route($uri_callback, $regex);
 
 		return self::$_confed_routes[self::$_current_urlconf][$name] = $route;
@@ -54,6 +39,46 @@ class Urlconf_Route extends Kohana_Route {
 		return self::$_confed_routes[$urlconf][$name];
 	}
 
+	public static function all($urlconf = NULL)
+	{
+		if ($urlconf === NULL)
+		{
+			$urlconf = self::$_current_urlconf;
+		}
+
+		// Load urlconf
+		self::load_urlconf($urlconf);
+
+		return self::$_confed_routes[$urlconf];
+	}
+
+	public static function name(Route $route, $urlconf = NULL)
+	{
+		if ($urlconf === NULL)
+		{
+			$urlconf = self::$_current_urlconf;
+		}
+
+		// if urlconfig not loaded or empty it always FALSE
+		if (empty(self::$_confed_routes[$urlconf]))
+		{
+			return FALSE;
+		}
+
+		return array_search($route, self::$_confed_routes[$urlconf]);
+	}
+
+	public static function current_urlconf($urlconf = NULL)
+	{
+		if ($urlconf === NULL) {
+			return self::$_current_urlconf;
+		}
+		else
+		{
+			self::$_current_urlconf = $urlconf;
+		}
+	}
+
 	public static function load_urlconf($urlconf)
 	{
 		// Already loaded
@@ -70,7 +95,7 @@ class Urlconf_Route extends Kohana_Route {
 			self::$_confed_routes[$urlconf] = Kohana::cache($cache_key);
 
 			// Routes were in cache
-			if (self::$_confed_routes[$urlconf] !== NULL)
+			if (is_array(self::$_confed_routes[$urlconf]))
 			{
 				return;
 			}
