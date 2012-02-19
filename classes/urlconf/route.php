@@ -8,11 +8,14 @@ class Urlconf_Route extends Kohana_Route {
 
 	protected static $_confed_routes = array();
 
+	protected static $_set_lock = TRUE;
+
 	public static function set($name, $uri_callback = NULL, $regex = NULL)
 	{
-		if ( ! isset(self::$_confed_routes[self::$_current_urlconf]))
+		if (self::$_set_lock)
 		{
-			throw new Kohana_Exception("All rotes must be defined in urls folder.");
+			throw new Kohana_Exception("All rotes must be defined in urls folder"
+				+ " and will be imported automatically by Route module.");
 		}
 
 		$route = new Route($uri_callback, $regex);
@@ -79,7 +82,7 @@ class Urlconf_Route extends Kohana_Route {
 		}
 	}
 
-	public static function load_urlconf($urlconf)
+	protected static function load_urlconf($urlconf)
 	{
 		// Already loaded
 		if (isset(self::$_confed_routes[$urlconf]))
@@ -104,8 +107,13 @@ class Urlconf_Route extends Kohana_Route {
 		// Save provios value of current urlconf
 		$save_urlconf = self::$_current_urlconf;
 
+		// Save lock state to allow nested loads
+		$save_lock = self::$_set_lock;
+
 		// Set required urlconf as cuurent
 		self::$_current_urlconf = $urlconf;
+
+		self::$_set_lock = FALSE;
 
 		self::$_confed_routes[$urlconf] = array();
 
@@ -119,8 +127,11 @@ class Urlconf_Route extends Kohana_Route {
 				array(':urlconf' => $urlconf));
 		}
 
-		// Restore previous
+		// Restore previous urlconf
 		self::$_current_urlconf = $save_urlconf;
+
+		// Restore lock
+		self::$_set_lock = $save_lock;
 
 		if (Kohana::$caching === TRUE)
 		{
@@ -131,6 +142,6 @@ class Urlconf_Route extends Kohana_Route {
 	public static function cache($save = FALSE)
 	{
 		// Avoid routes built-in cache
-		return FALSE;
+		throw new Kohana_Exception("You should not use routes built-in cache. All routes cashed in case of Kohana::caching.");
 	}
 }
