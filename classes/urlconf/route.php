@@ -4,6 +4,9 @@ class Urlconf_Route extends Kohana_Route {
 
 	const DEFAUlT_URLCONF = 'default';
 
+	// This urls wiil be awailable for all urlconfs
+	const COMMON_URLCONF = '_common';
+
 	protected static $_current_urlconf = Urlconf_Route::DEFAUlT_URLCONF;
 
 	protected static $_confed_routes = array();
@@ -35,8 +38,13 @@ class Urlconf_Route extends Kohana_Route {
 
 		if ( ! isset(self::$_confed_routes[$urlconf][$name]))
 		{
-			throw new Kohana_Exception('The requested route does not exist: :route',
-				array(':route' => $name));
+			if ( ! isset(self::$_confed_routes[self::COMMON_URLCONF][$name]))
+			{
+				throw new Kohana_Exception('The requested route does not exist: :route',
+					array(':route' => $name));
+			}
+
+			return self::$_confed_routes[self::COMMON_URLCONF][$name];
 		}
 
 		return self::$_confed_routes[$urlconf][$name];
@@ -52,7 +60,10 @@ class Urlconf_Route extends Kohana_Route {
 		// Load urlconf
 		self::load_urlconf($urlconf);
 
-		return self::$_confed_routes[$urlconf];
+		// Include common urlconf at the end
+		$commons = self::$_confed_routes[self::COMMON_URLCONF];
+
+		return self::$_confed_routes[$urlconf] + $commons;
 	}
 
 	public static function name(Route $route, $urlconf = NULL)
@@ -68,7 +79,13 @@ class Urlconf_Route extends Kohana_Route {
 			return FALSE;
 		}
 
-		return array_search($route, self::$_confed_routes[$urlconf]);
+		$ret = array_search($route, self::$_confed_routes[$urlconf]);
+
+		if ($ret !== FALSE)
+		{
+			return $ret;
+		}
+		return array_search($route, self::$_confed_routes[self::COMMON_URLCONF]);
 	}
 
 	public static function url($name, array $params = NULL, $protocol = NULL,
@@ -90,16 +107,26 @@ class Urlconf_Route extends Kohana_Route {
 		}
 		else
 		{
+			if ($urlconf === self::COMMON_URLCONF)
+			{
+				throw new Kohana_Exception("Can not set common urlconf as current.");
+			}
 			self::$_current_urlconf = $urlconf;
 		}
 	}
 
 	protected static function load_urlconf($urlconf)
 	{
-		// Already loaded
+		// Already loaded. If at least one urlconf loaded, common loaded too
 		if (isset(self::$_confed_routes[$urlconf]))
 		{
 			return;
+		}
+
+		if ($urlconf !== self::COMMON_URLCONF and
+			! isset(self::$_confed_routes[self::COMMON_URLCONF]))
+		{
+			self::load_urlconf(self::COMMON_URLCONF);
 		}
 
 		if (Kohana::$caching === TRUE)
@@ -135,8 +162,11 @@ class Urlconf_Route extends Kohana_Route {
 		}
 		else
 		{
-			throw new Kohana_Exception("Can't load urlconf: :urlconf",
-				array(':urlconf' => $urlconf));
+			// Ignore not existing common urlconf
+			if ($urlconf !== self::COMMON_URLCONF) {
+				throw new Kohana_Exception("Can't load urlconf: :urlconf",
+					array(':urlconf' => $urlconf));
+			}
 		}
 
 		// Restore previous urlconf
