@@ -91,13 +91,13 @@ class Urlconf_Route extends Kohana_Route {
 	public static function url($name, array $params = NULL, $protocol = NULL,
 		$urlconf = NULL)
 	{
-		$route = Route::get($name, $urlconf);
+		$route = self::get($name, $urlconf);
 
 		// Create a URI with the route and convert it to a URL
 		if ($route->is_external())
-			return Route::get($name)->uri($params);
+			return $route->uri($params);
 		else
-			return URL::site(Route::get($name)->uri($params), $protocol);
+			return URL::site($route->uri($params), $protocol);
 	}
 
 	public static function current_urlconf($urlconf = NULL)
