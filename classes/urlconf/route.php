@@ -18,7 +18,7 @@ class Urlconf_Route extends Kohana_Route {
 		if (self::$_set_lock)
 		{
 			throw new Kohana_Exception("All rotes must be defined in urls folder"
-				+ " and will be imported automatically by Route module.");
+				." and will be imported automatically by Route module.");
 		}
 
 		$route = new Route($uri_callback, $regex);
