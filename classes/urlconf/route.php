@@ -7,15 +7,15 @@ class Urlconf_Route extends Kohana_Route {
 	// This urls wiil be awailable for all urlconfs
 	const COMMON_URLCONF = '_common';
 
-	protected static $_current_urlconf = Urlconf_Route::DEFAUlT_URLCONF;
-
 	protected static $_confed_routes = array();
 
-	protected static $_set_lock = TRUE;
+	protected static $_current_urlconf = Urlconf_Route::DEFAUlT_URLCONF;
+
+	protected static $_loading_urlconf = NULL;
 
 	public static function set($name, $uri_callback = NULL, $regex = NULL)
 	{
-		if (self::$_set_lock)
+		if (self::$_loading_urlconf === NULL)
 		{
 			throw new Kohana_Exception("All rotes must be defined in urls folder"
 				." and will be imported automatically by Route module.");
@@ -23,7 +23,7 @@ class Urlconf_Route extends Kohana_Route {
 
 		$route = new Route($uri_callback, $regex);
 
-		return self::$_confed_routes[self::$_current_urlconf][$name] = $route;
+		return self::$_confed_routes[self::$_loading_urlconf][$name] = $route;
 	}
 
 	public static function get($name, $urlconf = NULL)
@@ -95,14 +95,19 @@ class Urlconf_Route extends Kohana_Route {
 
 		// Create a URI with the route and convert it to a URL
 		if ($route->is_external())
+		{
 			return $route->uri($params);
+		}
 		else
+		{
 			return URL::site($route->uri($params), $protocol);
+		}
 	}
 
 	public static function current_urlconf($urlconf = NULL)
 	{
-		if ($urlconf === NULL) {
+		if ($urlconf === NULL)
+		{
 			return self::$_current_urlconf;
 		}
 		else
@@ -143,37 +148,33 @@ class Urlconf_Route extends Kohana_Route {
 			}
 		}
 
-		// Save provios value of current urlconf
-		$save_urlconf = self::$_current_urlconf;
-
-		// Save lock state to allow nested loads
-		$save_lock = self::$_set_lock;
+		// Save provios value of loading urlconf
+		$save_urlconf = self::$_loading_urlconf;
 
 		// Set required urlconf as cuurent
-		self::$_current_urlconf = $urlconf;
-
-		self::$_set_lock = FALSE;
+		self::$_loading_urlconf = $urlconf;
 
 		self::$_confed_routes[$urlconf] = array();
 
-		if ($file = Kohana::find_file('urls', $urlconf))
+		if ($files = Kohana::find_file('urls', $urlconf, NULL, TRUE))
 		{
-			require $file;
+			foreach ($files as $file)
+			{
+				require $file;
+			}
 		}
 		else
 		{
 			// Ignore not existing common urlconf
-			if ($urlconf !== self::COMMON_URLCONF) {
+			if ($urlconf !== self::COMMON_URLCONF)
+			{
 				throw new Kohana_Exception("Can't load urlconf: :urlconf",
 					array(':urlconf' => $urlconf));
 			}
 		}
 
 		// Restore previous urlconf
-		self::$_current_urlconf = $save_urlconf;
-
-		// Restore lock
-		self::$_set_lock = $save_lock;
+		self::$_loading_urlconf = $save_urlconf;
 
 		if (Kohana::$caching === TRUE)
 		{
