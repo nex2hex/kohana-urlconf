@@ -182,7 +182,7 @@ class Urlconf_Route extends Kohana_Route {
 		}
 	}
 
-	public static function cache($save = FALSE)
+	public static function cache($save = false, $append = false)
 	{
 		// Avoid routes built-in cache
 		throw new Kohana_Exception("You should not use routes built-in cache. All routes cashed in case of Kohana::caching.");
